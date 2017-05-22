@@ -167,6 +167,12 @@ class AlgebraicSimplifierVisitor : public DfsHloVisitorWithDefault {
   Status HandleReverse(HloInstruction* reverse,
                        HloInstruction* operand) override;
   Status HandleSlice(HloInstruction* slice, HloInstruction* operand) override;
+  Status HandleDynamicSlice(HloInstruction* slice, HloInstruction* operand,
+                            HloInstruction* start_indices) override;
+  Status HandleDynamicUpdateSlice(HloInstruction* dynamic_update_slice,
+                                  HloInstruction* operand,
+                                  HloInstruction* update,
+                                  HloInstruction* start_indices) override;
 
   Status HandleTranspose(HloInstruction* transpose) override;
 
@@ -953,6 +959,15 @@ StatusOr<bool> AlgebraicSimplifierVisitor::
 Status AlgebraicSimplifierVisitor::HandleReshape(HloInstruction* reshape) {
   auto operand = reshape->mutable_operand(0);
 
+  // Reshape directly to empty constant if the shape contains zero-element
+  // dimension.
+  if (ShapeUtil::HasZeroElements(reshape->shape())) {
+    auto empty_constant = HloInstruction::CreateConstant(
+        LiteralUtil::CreateFromShape(reshape->shape()));
+
+    return ReplaceWithNewInstruction(reshape, std::move(empty_constant));
+  }
+
   // Delete no-op reshapes, i.e. where shape = operand shape.
   if (SameShape(reshape, operand)) {
     VLOG(10) << "deleting no-op reshape";
@@ -1016,6 +1031,25 @@ Status AlgebraicSimplifierVisitor::HandleSlice(HloInstruction* slice,
   // Delete no-op slices, i.e. where shape = operand shape.
   if (ReplaceInstructionIfSameShape(slice, operand)) {
     return Status::OK();
+  }
+  return Status::OK();
+}
+
+Status AlgebraicSimplifierVisitor::HandleDynamicSlice(
+    HloInstruction* dynamic_slice, HloInstruction* operand,
+    HloInstruction* start_indices) {
+  if (ShapeUtil::IsScalar(dynamic_slice->shape())) {
+    return ReplaceInstruction(dynamic_slice, operand);
+  }
+  return Status::OK();
+}
+
+Status AlgebraicSimplifierVisitor::HandleDynamicUpdateSlice(
+    HloInstruction* dynamic_update_slice, HloInstruction* operand,
+    HloInstruction* update, HloInstruction* start_indices) {
+  // DynamicUpdateSlice on a scalar just passes through the update argument.
+  if (ShapeUtil::IsScalar(dynamic_update_slice->shape())) {
+    return ReplaceInstruction(dynamic_update_slice, update);
   }
   return Status::OK();
 }
