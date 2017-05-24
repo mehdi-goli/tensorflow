@@ -165,7 +165,7 @@ class DepthwiseConv2DTest(test.TestCase):
           input_size, filter_size, stride, padding, use_gpu=False)
 
   def testDepthwiseConv2DFormat(self):
-    if not test.is_gpu_available():
+    if not test.is_gpu_available(cuda_only=True):
       return
 
     for index, (input_size, filter_size, _, stride,
@@ -367,7 +367,7 @@ class DepthwiseConv2DTest(test.TestCase):
             use_gpu=use_gpu)
 
   def testDepthwiseConv2DInputGradFormat(self):
-    if not test.is_gpu_available():
+    if not test.is_gpu_available(cuda_only=True):
       return
 
     for index, (input_size, filter_size, output_size, stride,
@@ -400,7 +400,7 @@ class DepthwiseConv2DTest(test.TestCase):
             use_gpu=use_gpu)
 
   def testDepthwiseConv2DFilterGradFormat(self):
-    if not test.is_gpu_available():
+    if not test.is_gpu_available(cuda_only=True):
       return
 
     for index, (input_size, filter_size, output_size, stride,
