@@ -314,6 +314,8 @@ std::pair<double, double> OpLevelCostEstimator::GetDeviceInfo(
       bandwidth = 100;
     }
   }
+  VLOG(1) << "Device: " << device.type() << " GFLOPS: " << gflops
+          << " Bandwidth: " << bandwidth;
 
   return std::make_pair(gflops, bandwidth);
 }
@@ -361,7 +363,7 @@ Costs OpLevelCostEstimator::DummyExecutionTime(
 Costs OpLevelCostEstimator::PredictOpCountBasedCost(
     double operations, const OpInfo& op_features) const {
   std::pair<double, double> device_perf = GetDeviceInfo(op_features.device());
-  Costs::NanoSeconds compute_cost(operations / device_perf.first);
+  Costs::NanoSeconds compute_cost(std::ceil(operations / device_perf.first));
   VLOG(1) << "Op:" << op_features.op() << " GOps:" << operations / 1e9
           << " Execution Time (ns):" << compute_cost.count();
 
@@ -372,7 +374,7 @@ Costs OpLevelCostEstimator::PredictOpCountBasedCost(
       CalculateOutputSize(op_features, &found_unknown_shapes);
   double total_io_size = total_input_size + total_output_size;
 
-  Costs::NanoSeconds memory_cost(total_io_size / device_perf.second);
+  Costs::NanoSeconds memory_cost(std::ceil(total_io_size / device_perf.second));
   VLOG(1) << "Op:" << op_features.op() << " Size (KB):" << (total_io_size) / 1e3
           << " Memory Time (ns):" << memory_cost.count();
 
@@ -461,7 +463,7 @@ int64 OpLevelCostEstimator::CountConv2DOperations(
   ops *= conv_dims.kx * conv_dims.ky;
   ops *= conv_dims.iz * conv_dims.oz;
   ops *= kOpsPerMac;
-  VLOG(1) << "Operations for Conv2D" << ops;
+  VLOG(1) << "Operations for Conv2D " << ops;
 
   if (conv_info != nullptr) {
     *conv_info = conv_dims;
@@ -679,7 +681,7 @@ int64 OpLevelCostEstimator::CountConv2DBackPropInputOperations(
   ops *= conv_dims.iz * conv_dims.oz;
   ops *= kOpsPerMac;
 
-  VLOG(1) << "Operations for Conv2DBackPropInput" << ops;
+  VLOG(1) << "Operations for Conv2DBackPropInput " << ops;
 
   if (returned_conv_dims != nullptr) {
     *returned_conv_dims = conv_dims;
